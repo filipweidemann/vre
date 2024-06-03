@@ -15,7 +15,7 @@ type IRClient struct {
 	MmapPtr          unsafe.Pointer
 }
 
-func (irc *IRClient) Init() error {
+func (irc *IRClient) Init() (func(), error) {
 	fdptr, err := syscall.UTF16PtrFromString(irc.MmapFileLocation)
 	if err != nil {
 		panic(err)
@@ -27,17 +27,17 @@ func (irc *IRClient) Init() error {
 	defer syscall.CloseHandle(fileHandle)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	addr, err := syscall.MapViewOfFile(fileHandle, syscall.FILE_MAP_READ, 0, 0, uintptr(vre.MMAP_FILESIZE))
 	irc.MmapAddr = addr
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	irc.MmapPtr = unsafe.Pointer(addr)
-	return nil
+	return irc.Close, nil
 }
 
 func (irc *IRClient) GetHeaderBytes() []byte {
@@ -45,13 +45,13 @@ func (irc *IRClient) GetHeaderBytes() []byte {
 	return b[:]
 }
 
-func (irc *IRClient) GetHeaderData() []uint32 {
+func (irc *IRClient) GetHeaderData() []int {
 	headerBytes := irc.GetHeaderBytes()
-	headerFields := make([]uint32, 10)
+	headerFields := make([]int, 10)
 
-	for i := 0; i < len(headerBytes); i += 4 {
-		val := binary.LittleEndian.Uint32(headerBytes[i : i+4])
-		headerFields = append(headerFields, val)
+	for i := 0; i < 10; i++ {
+		val := int(binary.LittleEndian.Uint32(headerBytes[i*4 : i*4+4]))
+		headerFields[i%10] = val
 	}
 
 	return headerFields

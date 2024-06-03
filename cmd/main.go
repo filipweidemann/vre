@@ -7,13 +7,13 @@ import (
 
 func main() {
 	irclient := core.NewIRClient(vre.IRSDK_MMAP_FILENAME)
-	err := irclient.Init()
+	close, err := irclient.Init()
 	if err != nil {
 		panic(err)
 	}
 
-	data := irclient.GetHeaderData()
-	for _, val := range data {
-		println(val)
-	}
+	defer close()
+
+	header := irclient.GetHeaderData()
+	println(header[vre.TickRate])
 }
